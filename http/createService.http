@@ -1,0 +1,12 @@
+POST http://localhost:3000/api/services HTTP/2
+Content-Type: application/json
+Authorization: admin
+
+{
+  "name": "{{$random.alphabetic(10)}}",
+  "description": "{{$random.alphanumeric(256)}}"
+}
+
+> {%
+  client.global.set("identifier", response.body.id)
+%}

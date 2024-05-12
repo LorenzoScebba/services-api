@@ -1,73 +1,183 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Services API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A simple NestJS, TypeORM, Postgres application with authentication, filtering and ordering implemented.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Considerations
 
-## Description
+### Authentication & Authorization
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Authentication is handled by the `auth.guard.ts` file. The Guard checks that the requests contains an `Authorization` header,
+if any is provided it will allow the request to get through.
 
-## Installation
+Ideally the authentication would be checked against an OIDC Server, like Keycloak.
 
-```bash
-$ npm install
-```
+Authorization is handled by the `auth.guard.ts` file. The Guard checks that the requests `Authorization` header matches at least one of the allowed roles.
 
-## Running the app
+Ideally the OIDC server would return a list of roles associated with the user, and we would validate against it.
 
-```bash
-# development
-$ npm run start
+### Endpoints
 
-# watch mode
-$ npm run start:dev
+#### GET /api/services
 
-# production mode
-$ npm run start:prod
-```
+This endpoint returns the list of services available in the system. It supports filtering and ordering by any field thanks to some smart query params:
 
-## Test
+- `filterBy`: You can filter the list (it filters using the `ilike` postgres operator) by any param by passing the following query string:
+  - **Single filter**: `?filterBy=name:<somename>`
+  - **Multiple filters**: `?filterBy=name:<somename>,description:<somedescription>`
+- `sortBy`: You can order the list by any param (both ascending and descending) by passing the following query string:
+    - **Single order**: `?sortBy=name:asc`
+    - **Multiple filters**: `?sortBy=name:asc,description:desc`
 
-```bash
-# unit tests
-$ npm run test
+By using this syntax we can avoid having multiple query params for filtering and multiple query params for sorting.
+Moreover, by using some NestJS Pipes we are sure that the query param passed is correct, if not the user will receive back a Bad Request response.
 
-# e2e tests
-$ npm run test:e2e
+Also, the endpoint supports pagination through the use of `?skip` and `?limit` params. 
 
-# test coverage
-$ npm run test:cov
-```
+  <details>
+  <summary>Example response</summary>
+  ```json
+  {
+    "data": [
+      {
+        "name": "My Service",
+        "description": "Lorem Ipsum",
+        "id": "59c7fa6a-1ce6-4c44-8340-c5a93c5ba357",
+        "versions": [
+          {
+            "version": "3.11.10",
+            "id": "2d716d01-4629-4dac-839e-c0f70bf3976d"
+          },
+          ...
+        ]
+      }
+    ],
+    "pagination": {
+      "take": 50,
+      "skip": 0,
+      "totalData": 1
+    }
+  }
+  ```
+</details>
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+#### GET /api/services/{id}
 
-## Stay in touch
+This endpoint returns a single service available in the system.
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The `id` path param is validated thanks to the use of the `ParseUUIDPipe` Pipe.
 
-## License
+If no service with the given id is found it will return a `404` response.
 
-Nest is [MIT licensed](LICENSE).
+  <details>
+  <summary>Example response</summary>
+  ```json
+  {
+    "name": "My Service",
+    "description": "Lorem Ipsum",
+    "id": "59c7fa6a-1ce6-4c44-8340-c5a93c5ba357",
+    "versions": [
+      {
+        "version": "3.11.10",
+        "id": "2d716d01-4629-4dac-839e-c0f70bf3976d"
+      },
+      ...
+    ]
+  }
+  ```
+</details>
+
+---
+
+#### GET /api/services/{id}/versions
+
+This endpoint returns the versions of a single service in the system.
+
+The `id` path param is validated thanks to the use of the `ParseUUIDPipe` Pipe.
+
+If no service with the given id is found it will return a `404` response.
+
+  <details>
+  <summary>Example response</summary>
+  ```json
+  [
+    {
+      "version": "3.11.10",
+      "id": "2d716d01-4629-4dac-839e-c0f70bf3976d"
+    },
+    ...
+  ]
+  ```
+</details>
+
+---
+
+#### POST /api/services
+
+This endpoint allows users to create a new service in the system. The created service will not contain any versions yet, they can be added later. It will return a "Created" status code.
+
+The only required parameter to create a Service is its `name`. The `id` will be generated by the database.
+
+The endpoint also returns a `Location` header in case the client needs to know where to fetch the resource.
+
+  <details>
+  <summary>Example response</summary>
+  ```json
+  {
+    "name": "CeZEHLISIU",
+    "description": "...",
+    "id": "68354b5c-6c82-4fd6-a7ba-b8b88d751c14"
+  }
+  ```
+</details>
+
+---
+
+#### DELETE /api/services/{id}
+
+This endpoint allows users to delete a a service from the system. By deleting a service all the versions connected to that service will also cease to exist. It will return a "No content" status code.
+
+The `id` path param is validated thanks to the use of the `ParseUUIDPipe` Pipe.
+
+---
+
+#### POST /api/services/{id}/version
+
+This endpoint allows user to create a new version connected to a service. It will return a "Created" status code on success.
+
+If the id of the requested service cannot be found it will return a "Bad request" status code.
+
+The `id` path param is validated thanks to the use of the `ParseUUIDPipe` Pipe.
+
+  <details>
+  <summary>Example response</summary>
+  ```json
+  {
+    "service": {
+      "name": "UlMQcdSNMO",
+      "description": "....",
+      "id": "fcffed56-5871-446a-9f85-473bb04d3f91",
+      "versions": []
+    },
+    "version": "0.10.19",
+    "id": "b01f2304-5f5f-4cae-8211-0357d750cfc9"
+  }
+  ```
+</details>
+
+---
+
+#### DELETE /api/services/{id}/version/{versionId}
+
+This endpoint allows user to delete a version connected to a service. It will return a "No Content" status code on success.
+
+The `id` and the `versionId` path params are validated thanks to the use of the `ParseUUIDPipe` Pipe.
+
+
+### Testing
+
+Ideally all files should be tested, an example can be found in the `app.controller.spec.ts` file.
+
+Moreover, an e2e testing solution against a QA environment could be setup to test in a real environment that
+the APIs are stable and responsive. The QA environment could be created when needed and deleted once the tests have run.

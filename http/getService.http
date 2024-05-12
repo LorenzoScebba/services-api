@@ -1,0 +1,3 @@
+GET http://localhost:3000/api/services/59c7fa6a-1ce6-4c44-8340-c5a93c5ba357 HTTP/2
+Content-Type: application/json
+Authorization: reader

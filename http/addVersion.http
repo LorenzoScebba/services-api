@@ -1,0 +1,11 @@
+POST http://localhost:3000/api/services/{{identifier}}/version HTTP/2
+Content-Type: application/json
+Authorization: admin
+
+{
+  "version": "{{$random.integer(0,5)}}.{{$random.integer(0,15)}}.{{$random.integer(0,20)}}"
+}
+
+> {%
+  client.global.set("versionIdentifier", response.body.id)
+%}
